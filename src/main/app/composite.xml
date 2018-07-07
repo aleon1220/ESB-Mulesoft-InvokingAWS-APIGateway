@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+    <http:listener-config name="composite-httpListenerConfig" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <apikit:config name="composite-config" raml="composite.raml" consoleEnabled="true" doc:name="Router"/>
+    <http:request-config name="usermicroservice-httpRequestConfig" protocol="HTTPS" host="fahze41owc.execute-api.us-east-1.amazonaws.com" port="443" basePath="/dev" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="identitymicroservice-httpRequestConfig" protocol="HTTPS" host="ctpoixww04.execute-api.us-east-1.amazonaws.com" port="443" basePath="/dev" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="roommicroservice-httpRequestConfig" protocol="HTTPS" host="rcd471phrl.execute-api.us-east-1.amazonaws.com" port="443" basePath="/dev" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="papermicroservice-httpRequestConfig" protocol="HTTPS" host="m4pss0w907.execute-api.us-east-1.amazonaws.com" port="443" basePath="/dev" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="registrationmicroservice-httpRequestConfig" protocol="HTTPS" host="tsom3l8zzg.execute-api.us-east-1.amazonaws.com" port="443" basePath="/dev" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="attendancemicroservice-httpRequestConfig" protocol="HTTPS" host="v7uvize1nc.execute-api.us-east-1.amazonaws.com" port="443" basePath="/dev" doc:name="HTTP Request Configuration"/>
+    <flow name="composite-main">
+        <http:listener config-ref="composite-httpListenerConfig" path="/api/*" doc:name="HTTP" doc:description="HTTP element to listen for payload requests."/>
+        <set-session-variable variableName="IdToken" value="#[message.inboundProperties.authorization]" doc:name="Session Variable" doc:description="sets the IdToken to validate"/>
+        <apikit:router config-ref="composite-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="composite-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+    </flow>
+    <flow name="composite-console">
+        <http:listener config-ref="composite-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console config-ref="composite-config" doc:name="APIkit Console"/>
+    </flow>
+    <flow name="post:/signup:application/json:composite-config">
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-session-variable variableName="tempIdentity" value="#[message.payload]" doc:name="Save Identity (Input Payload)"/>
+        <http:request config-ref="usermicroservice-httpRequestConfig" path="/user/{id}" method="GET" doc:name="Get User by ID">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.payload.id]"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-session-variable variableName="tempUser" value="#[message.payload]" doc:name="Save User (HTTP Result Payload)"/>
+        <set-payload value="#[tempIdentity]" doc:name="Retrieve Identity (Input Payload)"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <http:request config-ref="identitymicroservice-httpRequestConfig" path="/identity" method="POST" doc:name="Create Identity by ID">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <set-payload value="{  &quot;group&quot;: &quot;#[tempUser.type]&quot; }" doc:name="Create Group Payload"/>
+        <http:request config-ref="identitymicroservice-httpRequestConfig" path="/identity/{id}/group" method="POST" doc:name="Add Identity to Group by ID">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[tempIdentity.id]"/>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <set-payload value="{  &quot;id&quot;: &quot;#[tempIdentity.id]&quot;,  &quot;group&quot;: &quot;#[tempUser.type]&quot; }" doc:name="Create Response Payload"/>
+    </flow>
+    <flow name="post:/addAttendance:application/json:composite-config">
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-session-variable variableName="tempAttendance" value="#[message.payload]" doc:name="Save Attendance (Input Payload)"/>
+        <logger message="#[message]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="registrationmicroservice-httpRequestConfig" path="/registration" method="GET" doc:name="Get Registration by Student and Paper ID">
+            <http:request-builder>
+                <http:query-param paramName="studentId" value="#[tempAttendance.studentId]"/>
+                <http:query-param paramName="paperId" value="#[tempAttendance.paperId]"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-payload value="#[tempAttendance]" doc:name="Retrieve Attendance (Input Payload)"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <http:request config-ref="attendancemicroservice-httpRequestConfig" path="/attendance" method="POST" doc:name="Create Attendance">
+            <http:request-builder>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+    </flow>
+    <flow name="post:/addPaper:application/json:composite-config">
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-session-variable variableName="tempPaper" value="#[message.payload]" doc:name="Save Paper (Input Payload)"/>
+        <logger message="#[tempPaper]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="usermicroservice-httpRequestConfig" path="/user/{id}" method="GET" doc:name="Get Lecturer by ID">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[tempPaper.lecturerId]"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="roommicroservice-httpRequestConfig" path="/room/{id}" method="GET" doc:name="Get Room by ID">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[tempPaper.room]"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-payload value="#[tempPaper]" doc:name="Retrieve Paper (Input Payload)"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <http:request config-ref="papermicroservice-httpRequestConfig" path="/paper" method="POST" doc:name="Create Paper by ID">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+    </flow>
+    <flow name="post:/addRegistration:application/json:composite-config">
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-session-variable variableName="tempRegistration" value="#[message.payload]" doc:name="Save Registration (Input Payload)"/>
+        <http:request config-ref="usermicroservice-httpRequestConfig" path="/user/{id}" method="GET" doc:name="Get User by ID">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[tempRegistration.studentId]"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="papermicroservice-httpRequestConfig" path="/paper/{id}" method="GET" doc:name="Get Paper by ID">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[tempRegistration.paperId]"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+        <logger message="#[message.payload]" level="INFO" doc:name="Logger"/>
+        <set-payload value="#[tempRegistration]" doc:name="Retrieve Registration (Input Payload)"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <http:request config-ref="registrationmicroservice-httpRequestConfig" path="/registration" method="POST" doc:name="Create Registration">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+                <http:header headerName="Authorization" value="#[IdToken]"/>
+            </http:request-builder>
+        </http:request>
+    </flow>
+    <apikit:mapping-exception-strategy name="composite-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+</mule>

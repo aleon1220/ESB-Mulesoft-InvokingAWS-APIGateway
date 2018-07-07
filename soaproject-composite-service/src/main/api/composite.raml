@@ -1,0 +1,52 @@
+#%RAML 1.0
+title: Composite Service API
+protocols: [ HTTP ]
+baseUri: http://localhost/api/{version}
+version: v1
+
+types:
+  SignupRequest: |
+    {
+       "$schema": "http://json-schema.org/schema",
+       "type": "object",
+       "description": "User details",
+       "properties": {
+         "id": { "type": "string" },
+         "password": { "type": "string" },
+         "email": { "type": "string" }
+       },
+       "required": [ "id", "password", "email" ]
+    }
+  SignupResponse: |
+    {
+      "$schema": "http://json-schema.org/schema",
+      "type": "object",
+      "description": "User details",
+      "properties": {
+        "id": { "type": "string" },
+        "group": { "type": "string" }
+      },
+      "required": [ "id", "group" ]
+    }
+
+/signup:
+  post:
+    body:
+      application/json:
+        type: SignupRequest
+        example: |
+          {
+            "id" : "54321",
+            "password" : "Another foo",
+            "email" : "user@example.com"
+          }
+    responses:
+      201:
+        body:
+          application/json:
+            type: SignupResponse
+            example: |
+              {
+                "id" : "54321",
+                "group" : "student"
+              }

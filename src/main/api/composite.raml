@@ -1,0 +1,172 @@
+#%RAML 1.0
+title: Composite Service API
+protocols: [ HTTP ]
+baseUri: http://localhost/api/{version}
+version: v1
+
+types:
+  SignupRequest: |
+    {
+       "$schema": "http://json-schema.org/schema",
+       "type": "object",
+       "description": "User details",
+       "properties": {
+         "id": { "type": "string" },
+         "password": { "type": "string" },
+         "email": { "type": "string" }
+       },
+       "required": [ "id", "password", "email" ]
+    }
+  SignupResponse: |
+    {
+      "$schema": "http://json-schema.org/schema",
+      "type": "object",
+      "description": "User details",
+      "properties": {
+        "id": { "type": "string" },
+        "group": { "type": "string" }
+      },
+      "required": [ "id", "group" ]
+    }
+  AddPaper: |
+    {
+       "$schema": "http://json-schema.org/schema",
+       "type": "object",
+       "description": "Paper details",
+       "properties": {
+         "id": { "type": "string" },
+         "lecturerId": { "type": "string" },
+         "name": { "type": "string" },
+         "stream": { "type": "string" },
+         "year": { "type": "string" },
+         "room": { "type": "string" }
+       },
+       "required": [ "id", "lecturerId", "name", "stream", "year", "room" ]
+    }
+  AddRegistrationRequest: |
+    {
+       "$schema": "http://json-schema.org/schema",
+       "type": "object",
+       "description": "User details",
+       "properties": {
+         "id": { "type": "string" },
+         "password": { "type": "string" },
+         "email": { "type": "string" }
+       },
+       "required": [ "id", "password", "email" ]
+    }
+  AddRegistration: |
+    {
+      "$schema": "http://json-schema.org/schema",
+      "type": "object",
+      "description": "Registration details",
+      "properties": {
+         "studentId": { "type": "string" },
+         "paperId": { "type": "string" }
+      },
+      "required": [ "studentId", "paperId" ]
+    }
+  AddAttendance: |
+    {
+       "$schema": "http://json-schema.org/schema",
+       "type": "object",
+       "description": "Attendance details",
+       "properties": {
+         "studentId": { "type": "string" },
+         "paperId": { "type": "string" },
+         "status": { "type": "string" }
+       },
+       "required": [ "studentId", "paperId", "status" ]
+    }
+
+/signup:
+  post:
+    body:
+      application/json:
+        type: SignupRequest
+        example: |
+          {
+            "id" : "54321",
+            "password" : "Another foo",
+            "email" : "user@example.com"
+          }
+    responses:
+      201:
+        body:
+          application/json:
+            type: SignupResponse
+            example: |
+              {
+                "id" : "54321",
+                "group" : "student"
+              }
+/addPaper:
+  post:
+    body:
+      application/json:
+        type: AddPaper
+        example: |
+          {
+            "id" : "54321",
+            "lecturerId" : "13345",
+            "name" : "Some Great Course",
+            "stream" : "80",
+            "year" : "2018",
+            "room" : "WT201"
+          }
+    responses:
+      201:
+        body:
+          application/json:
+            type: AddPaper
+            example: |
+              {
+                "id" : "54321",
+                "lecturerId" : "13345",
+                "name" : "Some Great Course",
+                "stream" : "80",
+                "year" : "2018",
+                "room" : "WT201"
+              }
+/addRegistration:
+  post:
+    body:
+      application/json:
+        type: AddRegistration
+        example: |
+          {
+            "studentId" : "54321",
+            "paperId" : "12334"
+          }
+    responses:
+      201:
+        body:
+          application/json:
+            type: AddRegistration
+            example: |
+              {
+                "studentId" : "54321",
+                "paperId" : "12334"
+              }
+/addAttendance:
+  post:
+    body:
+      application/json:
+        type: AddAttendance
+        example: |
+          {
+            "studentId" : "54321",
+            "paperId" : "12334",
+            "status" : "present"
+          }
+    responses:
+      201:
+        body:
+          application/json:
+            type: AddAttendance
+            example: |
+              {
+                "studentId" : "54321",
+                "paperId" : "12334",
+                "status" : "present"
+              }
